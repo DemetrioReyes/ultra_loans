@@ -1,1 +1,125 @@
 USE ultra_loans; CREATE TABLE IF NOT EXISTS loans (id INT AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, ssn VARCHAR(11) NOT NULL, date_of_birth DATE NOT NULL, address TEXT NOT NULL, city VARCHAR(100) NOT NULL, state VARCHAR(50) NOT NULL, zip_code VARCHAR(10) NOT NULL, home_phone VARCHAR(15), mobile_phone VARCHAR(15) NOT NULL, email VARCHAR(100) NOT NULL, mobile_carrier VARCHAR(50) NOT NULL, mother_maiden_name VARCHAR(100) NOT NULL, housing_status ENUM('Rented', 'Owned', 'Living with Family', 'Other') NOT NULL, monthly_rent DECIMAL(10,2), years_at_current_address INT, requested_amount DECIMAL(10,2) NOT NULL, loan_purpose VARCHAR(255), employer_name VARCHAR(100) NOT NULL, job_title VARCHAR(100) NOT NULL, work_phone VARCHAR(15), work_address TEXT NOT NULL, work_city VARCHAR(100) NOT NULL, work_state VARCHAR(50) NOT NULL, work_zip_code VARCHAR(10) NOT NULL, years_at_current_job INT NOT NULL, gross_income DECIMAL(10,2) NOT NULL, pay_frequency ENUM('Weekly','Bi-weekly','Monthly') NOT NULL, other_income DECIMAL(10,2) DEFAULT 0.00, other_income_source VARCHAR(255), bank_name VARCHAR(100) NOT NULL, account_type ENUM('Savings','Checking') NOT NULL, account_number VARCHAR(20) NOT NULL, routing_number VARCHAR(20) NOT NULL, months_with_bank INT NOT NULL, reference1_name VARCHAR(100) NOT NULL, reference1_phone VARCHAR(15) NOT NULL, reference1_relation VARCHAR(50) NOT NULL, reference2_name VARCHAR(100) NOT NULL, reference2_phone VARCHAR(15) NOT NULL, reference2_relation VARCHAR(50) NOT NULL, has_vehicle BOOLEAN DEFAULT FALSE, vehicle_make VARCHAR(50), vehicle_model VARCHAR(50), vehicle_year INT, has_cosigner BOOLEAN DEFAULT FALSE, cosigner_name VARCHAR(100), cosigner_phone VARCHAR(15), status ENUM('Pending','Approved','Denied','In Process') DEFAULT 'Pending', notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, INDEX idx_status (status), INDEX idx_ssn (ssn), INDEX idx_last_name (last_name));
+
+
+
+
+
+-- Tabla de administradores/campañas
+CREATE TABLE IF NOT EXISTS campaigns (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_name VARCHAR(100) NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    campaign_name VARCHAR(100) NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Modificar tabla loans para asociar a campañas
+ALTER TABLE loans 
+ADD COLUMN campaign_id INT,
+ADD FOREIGN KEY (campaign_id) REFERENCES campaigns(id);
+
+
+
+
+
+
+
+curl -X POST "http://localhost:8000/loans/apply/ce43fa46ac7e6460f2e7f8b843e109b1f7f4d32beaebe395637a5b1258935a21" \
+-H "Content-Type: application/json" \
+-d '{
+    "first_name": "John",
+    "last_name": "Doe",
+    "ssn": "123-45-6789",
+    "date_of_birth": "1990-01-01",
+    "address": "123 Main St",
+    "city": "Los Angeles",
+    "state": "CA",
+    "zip_code": "90001",
+    "mobile_phone": "555-123-4567",
+    "email": "john@example.com",
+    "mobile_carrier": "T-Mobile",
+    "mother_maiden_name": "Smith",
+    "housing_status": "Rented",
+    "monthly_rent": 1500,
+    "years_at_current_address": 2,
+    "requested_amount": 5000,
+    "loan_purpose": "Debt Consolidation",
+    "employer_name": "Tech Corp",
+    "job_title": "Developer",
+    "work_phone": "555-987-6543",
+    "work_address": "456 Business Ave",
+    "years_at_current_job": 3,
+    "gross_income": 75000,
+    "pay_frequency": "Bi-weekly",
+    "bank_name": "Chase",
+    "account_type": "Checking",
+    "account_number": "1234567890",
+    "routing_number": "987654321",
+    "months_with_bank": 24,
+    "reference1_name": "Jane Smith",
+    "reference1_phone": "555-111-2222",
+    "reference1_relation": "Friend",
+    "reference2_name": "Bob Johnson",
+    "reference2_phone": "555-333-4444",
+    "reference2_relation": "Colleague"
+}'
+
+
+
+CREATE TABLE loans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    campaign_token VARCHAR(64) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    ssn VARCHAR(11) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    address TEXT NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    zip_code VARCHAR(10) NOT NULL,
+    home_phone VARCHAR(15),
+    mobile_phone VARCHAR(15) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    mobile_carrier VARCHAR(50) NOT NULL,
+    mother_maiden_name VARCHAR(100) NOT NULL,
+    housing_status ENUM('Rented', 'Owned', 'Living with Family', 'Other') NOT NULL,
+    monthly_rent DECIMAL(10, 2),
+    years_at_current_address INT,
+    requested_amount DECIMAL(10, 2) NOT NULL,
+    loan_purpose VARCHAR(255),
+    employer_name VARCHAR(100) NOT NULL,
+    job_title VARCHAR(100) NOT NULL,
+    work_phone VARCHAR(15),
+    work_address TEXT NOT NULL,
+    years_at_current_job INT NOT NULL,
+    gross_income DECIMAL(10, 2) NOT NULL,
+    pay_frequency ENUM('Weekly', 'Bi-weekly', 'Monthly') NOT NULL,
+    other_income DECIMAL(10, 2) DEFAULT 0.00,
+    other_income_source VARCHAR(255),
+    bank_name VARCHAR(100) NOT NULL,
+    account_type ENUM('Savings', 'Checking') NOT NULL,
+    account_number VARCHAR(20) NOT NULL,
+    routing_number VARCHAR(20) NOT NULL,
+    months_with_bank INT NOT NULL,
+    reference1_name VARCHAR(100) NOT NULL,
+    reference1_phone VARCHAR(15) NOT NULL,
+    reference1_relation VARCHAR(50) NOT NULL,
+    reference2_name VARCHAR(100) NOT NULL,
+    reference2_phone VARCHAR(15) NOT NULL,
+    reference2_relation VARCHAR(50) NOT NULL,
+    has_vehicle BOOLEAN DEFAULT FALSE,
+    vehicle_make VARCHAR(50),
+    vehicle_model VARCHAR(50),
+    vehicle_year INT,
+    has_cosigner BOOLEAN DEFAULT FALSE,
+    cosigner_name VARCHAR(100),
+    cosigner_phone VARCHAR(15),
+    status ENUM('Pending', 'Approved', 'Denied', 'In Process') DEFAULT 'Pending',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (campaign_token) REFERENCES admin_users(campaign_token)
+);

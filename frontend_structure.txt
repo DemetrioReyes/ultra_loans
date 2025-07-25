@@ -1,0 +1,101 @@
+ESTRUCTURA FRONTEND REACT - ULTRA LOANS
+
+1. ENDPOINTS BACKEND DISPONIBLES
+--------------------------------
+POST /admin/register - Crear nuevos administradores (requiere superadmin)
+POST /admin/login - Login de administradores
+GET /admin/my-loans - Ver préstamos de la campaña
+POST /api/v1/loans/apply/{campaign_token} - Recibir solicitudes de préstamos
+
+2. ESTRUCTURA DE COMPONENTES
+--------------------------------
+
+A. PANEL DE AUTENTICACIÓN
+------------------------
+- Página de Login (/login)
+  * Formulario de login
+  * Manejo de token JWT
+  * Almacenamiento en localStorage
+  * Redirección según rol (superadmin/admin)
+
+B. PANEL DE SUPERADMIN (/superadmin)
+--------------------------------
+- Lista de Administradores
+  * Tabla con todos los admins registrados
+  * Detalles de cada admin
+  * Campaign tokens asignados
+- Formulario de Registro
+  * Crear nuevos administradores
+  * Asignación automática de campaign_token
+- Dashboard
+  * Estadísticas generales
+  * Total de admins
+  * Total de préstamos en el sistema
+
+C. PANEL DE ADMIN (/admin)
+------------------------
+- Dashboard Principal
+  * Resumen de solicitudes
+  * Total de préstamos
+  * Préstamos pendientes
+  * Préstamos aprobados/rechazados
+  * Gráficos estadísticos
+- Información de Campaña
+  * Mostrar campaign_token
+  * Botón para copiar token
+  * URL de formulario de solicitud
+
+D. GESTIÓN DE PRÉSTAMOS (/admin/loans)
+-----------------------------------
+- Tabla de Préstamos
+  * Filtros por estado
+  * Búsqueda por nombre/email
+  * Paginación
+  * Ordenamiento por columnas
+- Detalles de Préstamo
+  * Vista expandible
+  * Toda la información del solicitante
+  * Historial de cambios
+  * Acciones (aprobar/rechazar)
+
+E. FORMULARIO DE SOLICITUD (/apply/:campaign_token)
+----------------------------------------------
+Formulario Multi-paso:
+1. Información Personal
+   * Nombre completo
+   * SSN
+   * Fecha de nacimiento
+   * Dirección
+   * Contacto
+
+2. Información Laboral
+   * Empleador
+   * Cargo
+   * Ingresos
+   * Tiempo en el trabajo
+
+3. Información Bancaria
+   * Banco
+   * Tipo de cuenta
+   * Números de cuenta y routing
+
+4. Referencias
+   * Dos referencias personales
+   * Información de contacto
+   * Relación
+
+5. Información del Vehículo (opcional)
+   * Marca
+   * Modelo
+   * Año
+
+3. CARACTERÍSTICAS TÉCNICAS
+--------------------------------
+- React Router para navegación
+- Context API o Redux para estado global
+- Axios para llamadas API
+- Material-UI o Tailwind para diseño
+- Formik + Yup para validación de formularios
+- React Query para caché y manejo de estado servidor
+- JWT para autenticación
+- LocalStorage para persistencia de sesión 

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routes.loans import router as loans_router
+from app.routes.admin import router as admin_router
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,8 +11,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Solo incluye el router de préstamos
+# Incluir los routers
 app.include_router(loans_router, prefix="/api/v1")
+app.include_router(admin_router)  # Este ya tiene el prefijo /admin definido en el router
 
 @app.get("/")
 def read_root():

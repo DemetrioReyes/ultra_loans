@@ -7,6 +7,7 @@ def create_loans_table():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS loans (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        campaign_token VARCHAR(64) NOT NULL,
         first_name VARCHAR(100) NOT NULL,
         last_name VARCHAR(100) NOT NULL,
         ssn VARCHAR(11) NOT NULL,
@@ -55,10 +56,41 @@ def create_loans_table():
         status ENUM('Pending', 'Approved', 'Denied', 'In Process') DEFAULT 'Pending',
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (campaign_token) REFERENCES admin_users(campaign_token)
     )
     """)
     
     conn.commit()
     cursor.close()
     conn.close()
+
+def apply_for_loan(loan_data: dict, campaign_token: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Agregar el campaign_token a los datos del préstamo
+    loan_data['campaign_token'] = campaign_token
+    
+    # Crear la consulta SQL dinámicamente
+    fields = ', '.join(loan_data.keys())
+    placeholders = ', '.join(['%s'] * len(loan_data))
+    
+    query = f"INSERT INTO loans ({fields}) VALUES ({placeholders})"
+    
+    try:
+        cursor.execute(query, list(loan_data.values()))
+        conn.commit()
+        loan_id = cursor.lastrowid
+        
+        # Obtener el préstamo recién creado
+        cursor.execute("SELECT * FROM loans WHERE id = %s", (loan_id,))
+        new_loan = cursor.fetchone()
+        
+        return new_loan
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cursor.close()
+        conn.close()

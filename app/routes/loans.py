@@ -1,115 +1,87 @@
-from fastapi import APIRouter, HTTPException
-from app.schemas.loan import LoanCreate, Loan
-from app.database import get_db_connection
-from typing import List, Optional
-import mysql.connector
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
+from app.models.loan import apply_for_loan
 
-router = APIRouter(
-    prefix="/loans",
-    tags=["loans"]
-)
+router = APIRouter(prefix="/loans", tags=["loans"])
 
-@router.post("/", response_model=Loan)
-def create_loan(loan: LoanCreate):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    query = """
-    INSERT INTO loans (
-        first_name, last_name, ssn, date_of_birth, address, city, state, zip_code,
-        home_phone, mobile_phone, email, mobile_carrier, mother_maiden_name,
-        housing_status, monthly_rent, years_at_current_address, requested_amount, 
-        loan_purpose, employer_name, job_title, work_address, work_city, 
-        work_state, work_zip_code, work_phone, years_at_current_job, gross_income, 
-        pay_frequency, other_income, other_income_source, bank_name, account_type, 
-        account_number, routing_number, months_with_bank,
-        reference1_name, reference1_phone, reference1_relation,
-        reference2_name, reference2_phone, reference2_relation,
-        has_vehicle, vehicle_make, vehicle_model, vehicle_year,
-        has_cosigner, cosigner_name, cosigner_phone, notes, status
-    ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s,
-        %s, %s, %s, %s,
-        %s, %s, %s,
-        %s, %s, %s,
-        %s, %s, %s, %s,
-        %s, %s, %s, %s, %s
-    )
-    """
-    
-    values = (
-        loan.first_name, loan.last_name, loan.ssn, loan.date_of_birth, loan.address,
-        loan.city, loan.state, loan.zip_code,
-        loan.home_phone, loan.mobile_phone, loan.email, loan.mobile_carrier,
-        loan.mother_maiden_name, loan.housing_status.value, loan.monthly_rent,
-        loan.years_at_current_address, loan.requested_amount, loan.loan_purpose,
-        loan.employer_name, loan.job_title, loan.work_address, loan.work_city,
-        loan.work_state, loan.work_zip_code, loan.work_phone, loan.years_at_current_job, 
-        loan.gross_income, loan.pay_frequency.value, loan.other_income, 
-        loan.other_income_source, loan.bank_name, loan.account_type.value, 
-        loan.account_number, loan.routing_number, loan.months_with_bank,
-        loan.reference1_name, loan.reference1_phone, loan.reference1_relation,
-        loan.reference2_name, loan.reference2_phone, loan.reference2_relation,
-        loan.has_vehicle, loan.vehicle_make, loan.vehicle_model, loan.vehicle_year,
-        loan.has_cosigner, loan.cosigner_name, loan.cosigner_phone, loan.notes,
-        "Pending"  # Default status
-    )
+class LoanApplication(BaseModel):
+    first_name: str
+    last_name: str
+    ssn: str
+    date_of_birth: str
+    address: str
+    city: str
+    state: str
+    zip_code: str
+    mobile_phone: str
+    email: str
+    mobile_carrier: str
+    mother_maiden_name: str
+    housing_status: str
+    requested_amount: float
+    employer_name: str
+    job_title: str
+    work_address: str
+    work_city: str
+    work_state: str
+    work_zip_code: str
+    years_at_current_job: int
+    gross_income: float
+    pay_frequency: str
+    bank_name: str
+    account_type: str
+    account_number: str
+    routing_number: str
+    months_with_bank: int
+    reference1_name: str
+    reference1_phone: str
+    reference1_relation: str
+    reference2_name: str
+    reference2_phone: str
+    reference2_relation: str
+    monthly_rent: Optional[float] = None
+    years_at_current_address: Optional[int] = None
+    loan_purpose: Optional[str] = None
+    work_phone: Optional[str] = None
+    other_income: Optional[float] = 0.0
+    other_income_source: Optional[str] = None
+    has_vehicle: Optional[bool] = False
+    vehicle_make: Optional[str] = None
+    vehicle_model: Optional[str] = None
+    vehicle_year: Optional[int] = None
+    has_cosigner: Optional[bool] = False
+    cosigner_name: Optional[str] = None
+    cosigner_phone: Optional[str] = None
+
+@router.post("/apply/{campaign_token}")
+async def create_loan_application(
+    campaign_token: str,
+    loan: LoanApplication
+):
     try:
-        cursor.execute(query, values)
-        conn.commit()
-        loan_id = cursor.lastrowid
+        # Convertir la fecha de nacimiento a formato MySQL
+        date_of_birth = datetime.strptime(loan.date_of_birth, "%Y-%m-%d").date()
         
-        cursor.execute("SELECT * FROM loans WHERE id = %s", (loan_id,))
-        created_loan = cursor.fetchone()
+        # Crear el diccionario con los datos del préstamo
+        loan_data = loan.model_dump()
+        loan_data["date_of_birth"] = date_of_birth
         
-        if created_loan.get("created_at"):
-            created_loan["created_at"] = created_loan["created_at"].isoformat()
-        if created_loan.get("updated_at"):
-            created_loan["updated_at"] = created_loan["updated_at"].isoformat()
-            
-        return created_loan
-    except mysql.connector.Error as err:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {err}")
-    finally:
-        cursor.close()
-        conn.close()
-
-@router.get("/", response_model=List[Loan])
-def get_loans(status: Optional[str] = None):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    try:
-        if status:
-            if status not in ["Pending", "Approved", "Denied", "In Process"]:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Status must be: Pending, Approved, Denied or In Process"
-                )
-            cursor.execute(
-                "SELECT * FROM loans WHERE status = %s ORDER BY created_at DESC", 
-                (status,)
-            )
-        else:
-            cursor.execute("SELECT * FROM loans ORDER BY created_at DESC")
+        # Eliminar los valores None del diccionario
+        loan_data = {k: v for k, v in loan_data.items() if v is not None}
         
-        loans = cursor.fetchall()
+        # Aplicar para el préstamo
+        new_loan = apply_for_loan(loan_data, campaign_token)
+        return new_loan
         
-        for loan in loans:
-            if loan.get("created_at"):
-                loan["created_at"] = loan["created_at"].isoformat()
-            if loan.get("updated_at"):
-                loan["updated_at"] = loan["updated_at"].isoformat()
-                
-        return loans
-    except mysql.connector.Error as err:
-        raise HTTPException(status_code=400, detail=f"Database error: {err}")
-    finally:
-        cursor.close()
-        conn.close()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
